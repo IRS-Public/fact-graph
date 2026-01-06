@@ -93,6 +93,7 @@ object CompNode:
     Maximum,
     Minimum,
     Modulo,
+    PayrollMonthsBetween,
     Multiply,
     Not,
     NotEqual,
