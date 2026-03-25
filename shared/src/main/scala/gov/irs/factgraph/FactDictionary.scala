@@ -4,6 +4,7 @@ import fs2.{ Fallible, Stream }
 import fs2.data.xml.*
 import fs2.data.xml.dom.*
 import fs2.data.xml.scalaXml.*
+import gov.irs.factgraph.compnodes.CollectionItemNode
 import gov.irs.factgraph.compnodes.EnumNode
 import gov.irs.factgraph.compnodes.MultiEnumNode
 import gov.irs.factgraph.compnodes.RootNode
@@ -43,15 +44,27 @@ class FactDictionary:
   def apply(path: Path): Option[FactDefinition] = definitions.get(path)
 
   def apply(path: String): FactDefinition | Null =
-    definitions.get(Path(path)) match
-      case Some(value) => return value
-      case _           => null
+    resolveDirectPath(path)
+      .orElse(resolveWildcardPath(path))
+      .orElse(resolveCollectionAliasPath(path))
+      .orNull
 
-    // Try to match a definition after removing the UUIDs
-    val withWildcard = UUID_REGEX.replaceAllIn(path, "*")
-    definitions.get(Path(withWildcard)) match
-      case Some(value) => return value
-      case _           => null
+  private def resolveDirectPath(path: String): Option[FactDefinition] =
+    definitions.get(Path(path))
+
+  // Try to match a definition after removing the UUIDs
+  private def resolveWildcardPath(path: String): Option[FactDefinition] =
+    definitions.get(Path(UUID_REGEX.replaceAllIn(path, "*")))
+
+  private def resolveCollectionAliasPath(path: String): Option[FactDefinition] =
+    path.stripPrefix("/").split("/").toList match
+      case firstSegment :: subPath :: _ =>
+        for
+          aliasDef <- definitions.get(Path(s"/$firstSegment"))
+          collectionName <- aliasDef.value.asInstanceOf[CollectionItemNode].getAlias()
+          resolved <- definitions.get(Path(s"$collectionName/*/$subPath"))
+        yield resolved
+      case _ => None
 
   def getDefinitionsAsNodes(): mutable.Map[Path, NodeSeq] = definitionsAsNodes
 

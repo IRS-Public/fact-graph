@@ -1,5 +1,7 @@
 package gov.irs.factgraph
 
+import gov.irs.factgraph.compnodes.BooleanNode
+import gov.irs.factgraph.compnodes.CollectionItemNode
 import gov.irs.factgraph.compnodes.RootNode
 import gov.irs.factgraph.definitions.*
 import gov.irs.factgraph.definitions.fact.{
@@ -8,7 +10,10 @@ import gov.irs.factgraph.definitions.fact.{
   FactConfigElement,
   FactConfigTrait,
 }
+import gov.irs.factgraph.definitions.fact.WritableConfigElement
 import gov.irs.factgraph.definitions.meta.{ EnumDeclarationTrait, MetaConfigTrait }
+import gov.irs.factgraph.types.Collection
+import java.util.UUID
 import org.scalatest.funspec.AnyFunSpec
 
 class FactDictionarySpec extends AnyFunSpec:
@@ -147,6 +152,104 @@ class FactDictionarySpec extends AnyFunSpec:
               override def version: String = "2"
           Meta.fromConfig(factDictionaryConfigTrait2.meta, dictionary)
         }
+      }
+    }
+
+    describe("getDefinition") {
+
+      it("returns an object definition for a path") {
+        val dictionary = FactDictionary()
+        val definition = FactDefinition.fromConfig(
+          FactConfigElement(
+            "/test",
+            None,
+            Some(
+              CompNodeConfigElement(
+                "Int",
+                Seq.empty,
+                CommonOptionConfigTraits.value("42"),
+              ),
+            ),
+            None,
+          ),
+        )(using dictionary)
+        assert(dictionary.getDefinition("/test") !== null)
+        assert(dictionary.getDefinition("/test") === definition)
+      }
+
+      it("returns null when no definition is found for the path") {
+        val dictionary = FactDictionary()
+        assert(dictionary.getDefinition("/nonexistent-path") == null)
+      }
+
+      val dictionary = FactDictionary();
+      FactDefinition.fromConfig(
+        FactConfigElement(
+          "/collection",
+          Some(
+            new WritableConfigElement("Collection"),
+          ),
+          None,
+          None,
+        ),
+      )(using dictionary)
+      FactDefinition.fromConfig(
+        FactConfigElement(
+          "/collection/*/bool",
+          None,
+          Some(
+            new CompNodeConfigElement("True"),
+          ),
+          None,
+        ),
+      )(using dictionary)
+      FactDefinition.fromConfig(
+        FactConfigElement(
+          "/collectionAlias",
+          None,
+          Some(
+            new CompNodeConfigElement(
+              "IndexOf",
+              Seq(
+                new CompNodeConfigElement(
+                  "Collection",
+                  Seq(
+                    new CompNodeConfigElement(
+                      "Dependency",
+                      Seq.empty,
+                      "/collection",
+                    ),
+                  ),
+                ),
+                new CompNodeConfigElement(
+                  "Index",
+                  Seq(
+                    CompNodeConfigElement(
+                      "Int",
+                      Seq(),
+                      CommonOptionConfigTraits.value("0"),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          None,
+        ),
+      )(using dictionary)
+
+      val graph = Graph(dictionary)
+      val uuid1: UUID = UUID.fromString("4a772c04-5445-4623-b216-edca2c79698a")
+
+      for {
+        result <- graph(Path("/collection"))
+        fact <- result
+      } fact.set(Collection(Vector(uuid1)))
+
+      graph.save()
+
+      it("returns the definition for a path with a collection alias") {
+        assert(dictionary.getDefinition("/collectionAlias/bool") !== null)
       }
     }
   }
