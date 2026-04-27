@@ -340,6 +340,39 @@ class SubtractSpec extends AnyFunSpec:
         assert(node.get(0) == Result.Complete(Day("2024-01-09")))
       }
     }
+    describe("when subtracting Day and a Day") {
+      it("returns an Int") {
+        val node = CompNode.fromDerivedConfig(
+          new CompNodeConfigElement(
+            "Subtract",
+            Seq(
+              new CompNodeConfigElement(
+                "Minuend",
+                Seq(
+                  new CompNodeConfigElement(
+                    "Day",
+                    Seq.empty,
+                    CommonOptionConfigTraits.value("2024-01-20"),
+                  ),
+                ),
+              ),
+              new CompNodeConfigElement(
+                "Subtrahends",
+                Seq(
+                  new CompNodeConfigElement(
+                    "Day",
+                    Seq.empty,
+                    CommonOptionConfigTraits.value("2024-01-15"),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        )
+
+        assert(node.get(0) == Result.Complete(5))
+      }
+    }
 
     describe("when the inputs are not numbers") {
       it("throws an exception") {

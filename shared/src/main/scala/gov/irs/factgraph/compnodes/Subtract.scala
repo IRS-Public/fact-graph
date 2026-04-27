@@ -48,7 +48,8 @@ object Subtract extends CompNodeFactory:
             summon[SubtractReduceOperator[Rational]],
           ),
         )
-      case _ =>
+      case node: DayNode => nodes.reduceLeft(binarySubtract)
+      case _             =>
         throw new UnsupportedOperationException(
           s"cannot Subtract a ${nodes.head.getClass.getName}",
         )
@@ -135,6 +136,14 @@ object Subtract extends CompNodeFactory:
             summon[SubtractBinaryOperator[Day, Day, Days]],
           ),
         )
+      case (lhs: DayNode, rhs: DayNode) =>
+        IntNode(
+          Expression.Binary(
+            lhs.expr,
+            rhs.expr,
+            summon[SubtractBinaryOperator[Int, Day, Day]],
+          ),
+        )
       case _ =>
         throw new UnsupportedOperationException(
           s"cannot Subtract a ${lhs.getClass.getName} and a ${rhs.getClass.getName}",
@@ -164,6 +173,8 @@ private object SubtractBinaryOperator:
     (lhs: Dollar, rhs: Dollar) => lhs - rhs
   implicit val dayDaysOperator: SubtractBinaryOperator[Day, Day, Days] =
     (lhs: Day, rhs: Days) => lhs - rhs
+  implicit val dayDayOperator: SubtractBinaryOperator[Int, Day, Day] =
+    (lhs: Day, rhs: Day) => lhs - rhs
   implicit val rationalRationalOperator: SubtractBinaryOperator[Rational, Rational, Rational] =
     (lhs: Rational, rhs: Rational) => lhs - rhs
   implicit val dollarIntOperator: SubtractBinaryOperator[Dollar, Dollar, Int] =

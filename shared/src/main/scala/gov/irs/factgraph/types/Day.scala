@@ -1,4 +1,5 @@
 package gov.irs.factgraph.types
+import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
 import scala.annotation.targetName
 import scala.beans.BeanProperty
@@ -22,6 +23,8 @@ final case class Day(@BeanProperty date: java.time.LocalDate) derives ReadWriter
   def >=(that: Day): Boolean = gteq(this, that)
 
   def -(y: Days): Day = this.minusDays(y)
+
+  def -(y: Day): Int = ChronoUnit.DAYS.between(y.date, this.date).toInt
 
   def +(y: Days): Day = this.plusDays(y)
 
