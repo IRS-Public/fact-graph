@@ -43,7 +43,7 @@ class DigestNodeWrapper(
 
   def overrideDefaultOption = this.overrideDefault match
     case null => None
-    case _    => Some(CompNodeDigestWrapper.toNative(this.overrideCondition))
+    case _    => Some(CompNodeDigestWrapper.toNative(this.overrideDefault))
 
 @JSExportTopLevel("DigestNodeWrapperFactory")
 object DigestNodeWrapper:
