@@ -91,7 +91,13 @@ class JSGraph(
           return SetReturnValue(ValidationError.toString, errorName, null)
         }
         maybeDay.right
-      case _ => return SetReturnValue(UnsupportedTypeError.toString, null, null)
+      // Every String writable's constraint is expressed as a
+      // `<Limit>` on the fact, and limits are checked below by `this.set(path, typedValue)`, which
+      // reports them as LimitError exactly as Min/Max on a Dollar are reported. Running the value
+      // through StringFactory here would instead second-guess the dictionary against a hardcoded
+      // list of specific patterns it knows nothing about.
+      case _: StringNode => value
+      case _             => return SetReturnValue(UnsupportedTypeError.toString, null, null)
 
     // Surface limit violations
     val rawSave = this.set(path, typedValue)

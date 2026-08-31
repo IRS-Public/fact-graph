@@ -35,4 +35,13 @@ class PinSpec extends AnyFunSpec:
         new Pin("01234")
       }
     }
+    describe("round-tripping through the persister") {
+      it("reads back what it writes") {
+        val written = upickle.default.write(Pin("01234"))
+        assert(upickle.default.read[Pin](written) == new Pin("01234"))
+      }
+      it("parses a string without recursing") {
+        assert(Pin.parseString("01234").contains(new Pin("01234")))
+      }
+    }
   }

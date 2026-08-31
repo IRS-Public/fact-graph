@@ -81,5 +81,8 @@ object IpPin:
   def parseString(s: String): Option[IpPin] =
     val cleanInput = s.replaceAll("[^0-9]", "")
     cleanInput match
-      case Pattern(pin) => Some(this(pin))
+      // single-argument `apply` above is this method's
+      // caller, so `this(pin)` calls back into `parseString` and never terminates. That made a
+      // graph holding a IpPin impossible to deserialize
+      case Pattern(pin) => Some(new IpPin(pin))
       case _            => None

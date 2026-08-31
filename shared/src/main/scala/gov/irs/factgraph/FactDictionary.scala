@@ -5,6 +5,7 @@ import fs2.data.xml.*
 import fs2.data.xml.dom.*
 import fs2.data.xml.scalaXml.*
 import gov.irs.factgraph.compnodes.CollectionItemNode
+import gov.irs.factgraph.compnodes.CollectionNode
 import gov.irs.factgraph.compnodes.EnumNode
 import gov.irs.factgraph.compnodes.MultiEnumNode
 import gov.irs.factgraph.compnodes.RootNode
@@ -56,14 +57,37 @@ class FactDictionary:
   private def resolveWildcardPath(path: String): Option[FactDefinition] =
     definitions.get(Path(UUID_REGEX.replaceAllIn(path, "*")))
 
+  // A path whose first segment is a fact that stands for another collection, or for one item of
+  // one. Both kinds are matched on rather than cast: the first segment of an undefined path can be a
+  // fact of any type at all, and an `asInstanceOf` here turned that into a ClassCastException from
+  // inside a lookup whose contract is to return null.
   private def resolveCollectionAliasPath(path: String): Option[FactDefinition] =
     path.stripPrefix("/").split("/").toList match
-      case firstSegment :: subPath :: _ =>
-        for
-          aliasDef <- definitions.get(Path(s"/$firstSegment"))
-          collectionName <- aliasDef.value.asInstanceOf[CollectionItemNode].getAlias()
-          resolved <- definitions.get(Path(s"$collectionName/*/$subPath"))
-        yield resolved
+      case firstSegment :: subPath =>
+        definitions.get(Path(s"/$firstSegment")).flatMap { aliasDef =>
+          aliasDef.value match
+            // `/primaryFiler` is one item of `/filers`, so `/primaryFiler/x` is `/filers/*/x`. The
+            // whole remainder first, then its head alone, which is what resolves a path into a
+            // typed value's own members: `/primaryFiler/tin/isSSN` answers with the `tin` fact.
+            case node: CollectionItemNode =>
+              for
+                collection <- node.getAlias()
+                resolved <- subPath.headOption.flatMap(head =>
+                  definitions
+                    .get(Path(s"$collection/*/${subPath.mkString("/")}"))
+                    .orElse(definitions.get(Path(s"$collection/*/$head"))),
+                )
+              yield resolved
+            // `/alaskaPfd1099s` is a `<Filter>` over `/form1099Miscs`, so `/alaskaPfd1099s/*/x` is
+            // `/form1099Miscs/*/x`. The alias replaces the first segment and the rest is carried
+            // over, wildcard included.
+            case node: CollectionNode =>
+              for
+                collection <- node.getAlias()
+                resolved <- definitions.get(Path((collection.toString :: subPath).mkString("/")))
+              yield resolved
+            case _ => None
+        }
       case _ => None
 
   def getDefinitionsAsNodes(): mutable.Map[Path, NodeSeq] = definitionsAsNodes

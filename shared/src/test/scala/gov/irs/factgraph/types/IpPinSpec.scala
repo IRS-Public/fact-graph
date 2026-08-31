@@ -35,4 +35,13 @@ class IpPinSpec extends AnyFunSpec:
         new IpPin("012345")
       }
     }
+    describe("round-tripping through the persister") {
+      it("reads back what it writes") {
+        val written = upickle.default.write(IpPin("012345"))
+        assert(upickle.default.read[IpPin](written) == new IpPin("012345"))
+      }
+      it("parses a string without recursing") {
+        assert(IpPin.parseString("012345").contains(new IpPin("012345")))
+      }
+    }
   }

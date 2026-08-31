@@ -3,6 +3,7 @@ package gov.irs.factgraph.compnodes
 import gov.irs.factgraph.*
 import gov.irs.factgraph.definitions.fact.WritableConfigTrait
 import gov.irs.factgraph.types.{ Collection, CollectionItem }
+import scala.scalajs.js.annotation.JSExport
 
 final case class CollectionNode(
     expr: Expression[Collection],
@@ -10,6 +11,10 @@ final case class CollectionNode(
 ) extends CompNode:
   type Value = Collection
   override def ValueClass = classOf[Collection]
+
+  /** The collection this one stands for, when it is a `<Filter>` or a `<Dependency>` on another. */
+  @JSExport
+  def getAlias() = alias
 
   override private[compnodes] def switch(
       cases: List[(BooleanNode, CompNode)],
